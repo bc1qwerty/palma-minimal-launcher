@@ -54,12 +54,14 @@ class MainActivity : AppCompatActivity() {
     private var availableIndices = mutableListOf<String>()
     
     private var favColumns = 2
+    private var isAnimationEnabled = true
 
     companion object {
         private const val TAG = "PalmaLauncher"
         private const val PREFS_NAME = "LauncherPrefs"
         private const val KEY_FAVORITES = "favorites_list"
         private const val KEY_COLUMNS = "fav_columns"
+        private const val KEY_ANIMATION = "animation_enabled"
         private val POTENTIAL_INDICES = listOf("ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ", 
                                               "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#")
     }
@@ -70,6 +72,7 @@ class MainActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         favColumns = prefs.getInt(KEY_COLUMNS, 2)
+        isAnimationEnabled = prefs.getBoolean(KEY_ANIMATION, true)
 
         initViews()
         setupRecyclerView()
@@ -119,7 +122,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupIndexBar() {
         indexBarLayout.removeAllViews()
-        
         availableIndices.clear()
         POTENTIAL_INDICES.forEach { label ->
             val hasApp = allAppsList.any { app ->
@@ -184,14 +186,20 @@ class MainActivity : AppCompatActivity() {
         for (i in 0 until indexBarLayout.childCount) {
             val tv = indexBarLayout.getChildAt(i) as TextView
             val dist = abs(i - selectedIndex)
-            val translationX = when (dist) {
-                0 -> -150f // Reduced intensity (half of 300)
-                1 -> -90f  // Half of 180
-                2 -> -45f  // Half of 90
-                3 -> -22f  // Half of 45
-                else -> 0f
+            
+            if (isAnimationEnabled) {
+                val translationX = when (dist) {
+                    0 -> -150f
+                    1 -> -90f
+                    2 -> -45f
+                    3 -> -22f
+                    else -> 0f
+                }
+                tv.translationX = translationX
+            } else {
+                tv.translationX = 0f
             }
-            tv.translationX = translationX
+            
             if (dist == 0) {
                 tv.setTextColor(0xFF000000.toInt())
                 tv.textSize = 32f
@@ -344,19 +352,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettingsMenu() {
-        val options = arrayOf("즐겨찾기 배치 설정", "앱 정보", "기본 런처 설정", "런처 삭제", "런처 재시작", "개인정보취급방침", "서비스이용약관", "GitHub 저장소")
+        val options = arrayOf("즐겨찾기 배치 설정", "애니메이션 설정", "앱 정보", "기본 런처 설정", "런처 삭제", "런처 재시작", "개인정보취급방침", "서비스이용약관", "GitHub 저장소")
         AlertDialog.Builder(this)
             .setTitle("런처 설정")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showColumnSettings()
-                    1 -> openAppInfo()
-                    2 -> openDefaultLauncherSettings()
-                    3 -> uninstallLauncher()
-                    4 -> restartLauncher()
-                    5 -> openUrl("https://github.com/bc1qwerty/palma-minimal-launcher/blob/main/PRIVACY.md")
-                    6 -> openUrl("https://github.com/bc1qwerty/palma-minimal-launcher/blob/main/TERMS.md")
-                    7 -> openUrl("https://github.com/bc1qwerty/palma-minimal-launcher")
+                    1 -> showAnimationSettings()
+                    2 -> openAppInfo()
+                    3 -> openDefaultLauncherSettings()
+                    4 -> uninstallLauncher()
+                    5 -> restartLauncher()
+                    6 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher/blob/main/PRIVACY.md")
+                    7 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher/blob/main/TERMS.md")
+                    8 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher")
                 }
             }
             .setNegativeButton("닫기", null)
@@ -364,13 +373,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showColumnSettings() {
-        val cols = arrayOf("1단 (최대 4개)", "2단 (최대 8개)", "3단 (최대 12개)")
+        val cols = arrayOf("1단 (최대 4개)", "2단 (최대 8개)", "3단 (최대 12개)", "4단 (최대 16개)", "5단 (최대 20개)")
         AlertDialog.Builder(this)
             .setTitle("즐겨찾기 배치 선택")
             .setSingleChoiceItems(cols, favColumns - 1) { dialog, which ->
                 favColumns = which + 1
                 prefs.edit().putInt(KEY_COLUMNS, favColumns).apply()
                 filterFavorites()
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showAnimationSettings() {
+        val options = arrayOf("애니메이션 켜기 (Palma/Y700 권장)", "애니메이션 끄기 (Leaf 3 권장)")
+        val checkedItem = if (isAnimationEnabled) 0 else 1
+        AlertDialog.Builder(this)
+            .setTitle("애니메이션 설정")
+            .setSingleChoiceItems(options, checkedItem) { dialog, which ->
+                isAnimationEnabled = (which == 0)
+                prefs.edit().putBoolean(KEY_ANIMATION, isAnimationEnabled).apply()
+                Toast.makeText(this, if (isAnimationEnabled) "애니메이션이 켜졌습니다." else "애니메이션이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
             }
             .show()
