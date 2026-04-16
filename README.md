@@ -1,35 +1,28 @@
-# Palma Minimal Launcher
+# Palma Minimal Launcher v1.0
 
 A minimalist, E-ink friendly Android launcher designed for Boox Palma and similar devices.
 
 ## Features
 
-- **Minimalist Design**: Clean, black and white interface optimized for E-ink displays.
+- **Minimalist Design**: Clean interface optimized for E-ink displays.
 - **Favorites Grid**: A 2-column grid of your most used apps that fills the screen.
-- **Drag & Drop Reordering**: Long press items in the favorites view to reorder them.
-- **All Apps List**: A clean list of all installed apps with a Niagara-style index bar for quick navigation.
-- **Smart Management**: Add or remove favorites by long-pressing apps in the "All Apps" view.
-- **System Info**: Quick view of time, date, and battery percentage.
-- **E-ink Optimization**: Disabled animations and high-contrast UI for better performance on E-ink screens.
+- **Niagara-style Index Bar**: Dynamic "Wave" effect with real-time filtering.
+- **Smart Indexing**: Only shows letters/consonants that have installed apps.
+- **Korean Support**: Full support for Korean consonants (ㄱ, ㄴ, ㄷ...) in the index bar.
+- **Drag & Drop**: Long press items in the favorites view to reorder them.
+- **Interactive Buttons**: Styled mode-switching buttons for better UX.
+- **Quick Settings**: Easy access to app info, default launcher setup, and more via the gear icon.
 
-## Settings
+## Versioning
 
-Access the settings menu by clicking the gear icon. Options include:
-- App Info
-- Set as Default Launcher
-- Uninstall Launcher
-- Restart Launcher
-- View Terms and Privacy Policy
+- **v1.0**: Initial stable release with full Niagara-style indexing and UI refinements.
 
 ## Installation
 
-1. Enable Developer Options and USB Debugging on your Android device.
-2. Connect your device to your computer.
-3. Use ADB to install the APK:
-   ```bash
-   adb install palma-launcher-v22.apk
-   ```
+```bash
+adb install palma-launcher-v26.apk
+```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - Copyright (c) 2026 bc1qwerty

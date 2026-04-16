@@ -7,12 +7,14 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
@@ -28,6 +30,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
@@ -42,14 +45,19 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appAdapter: AppAdapter
     private var allAppsList = mutableListOf<AppInfo>()
     private var favoriteAppsList = mutableListOf<AppInfo>()
+    private var filteredAppsList = mutableListOf<AppInfo>()
     
     private lateinit var prefs: SharedPreferences
     private var isShowingAllApps = false
+    private var currentSelectedIndex = -1
+    private var availableIndices = mutableListOf<String>()
 
     companion object {
         private const val TAG = "PalmaLauncher"
         private const val PREFS_NAME = "LauncherPrefs"
         private const val KEY_FAVORITES = "favorites_list"
+        private val POTENTIAL_INDICES = listOf("ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ", 
+                                              "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -61,7 +69,6 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setupRecyclerView()
         loadApps()
-        setupIndexBar()
         updateHeader()
         setupListeners()
     }
@@ -80,10 +87,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() {
         appAdapter = AppAdapter(mutableListOf(), this::onAppClicked, this::onAppLongClicked, this::onOrderChanged)
-        
-        recyclerViewApps.layoutManager = GridLayoutManager(this, 2)
         recyclerViewApps.adapter = appAdapter
         recyclerViewApps.itemAnimator = null
+        updateDisplayList()
 
         recyclerViewApps.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
             override fun onGlobalLayout() {
@@ -107,39 +113,136 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupIndexBar() {
         indexBarLayout.removeAllViews()
-        val alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ#".toCharArray()
         
-        alphabets.forEach { char ->
+        availableIndices.clear()
+        POTENTIAL_INDICES.forEach { label ->
+            val hasApp = allAppsList.any { app ->
+                val firstChar = app.name.firstOrNull() ?: return@any false
+                val initial = getInitialSound(firstChar)
+                if (label == "#") {
+                    !initial[0].isLetter() && !isKorean(firstChar)
+                } else if (label.length == 1 && isKoreanConsonant(label[0])) {
+                    initial == label
+                } else {
+                    app.name.uppercase().startsWith(label)
+                }
+            }
+            if (hasApp) availableIndices.add(label)
+        }
+
+        availableIndices.forEach { label ->
             val tv = TextView(this).apply {
-                text = char.toString()
+                text = label
                 textSize = 12f
                 gravity = Gravity.CENTER
-                setPadding(0, 4, 0, 4)
-                setTextColor(0xFF000000.toInt())
+                setTextColor(0xFF888888.toInt())
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     0,
                     1f
                 )
-                setOnClickListener {
-                    scrollToLetter(char)
-                }
             }
             indexBarLayout.addView(tv)
         }
-        indexBarLayout.visibility = View.GONE
+
+        indexBarLayout.setOnTouchListener { v, event ->
+            if (!isShowingAllApps) return@setOnTouchListener false
+            
+            val y = event.y
+            val height = v.height
+            
+            when (event.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    if (height > 0) {
+                        val index = ((y / height) * availableIndices.size).toInt()
+                        if (index >= 0 && index < availableIndices.size) {
+                            if (index != currentSelectedIndex) {
+                                currentSelectedIndex = index
+                                filterAppsByLabel(availableIndices[index])
+                            }
+                            applyWaveEffect(index)
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    resetWaveEffect()
+                    true
+                }
+                else -> false
+            }
+        }
+        indexBarLayout.visibility = if (isShowingAllApps) View.VISIBLE else View.GONE
     }
 
-    private fun scrollToLetter(letter: Char) {
-        if (!isShowingAllApps) return
-        val position = allAppsList.indexOfFirst { 
-            val firstChar = it.name.uppercase().firstOrNull() ?: ' '
-            if (letter == '#') !firstChar.isLetter() else firstChar == letter
-        }
-        if (position != -1) {
-            (recyclerViewApps.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(position, 0)
+    private fun applyWaveEffect(selectedIndex: Int) {
+        for (i in 0 until indexBarLayout.childCount) {
+            val tv = indexBarLayout.getChildAt(i) as TextView
+            val dist = abs(i - selectedIndex)
+            
+            val translationX = when (dist) {
+                0 -> -100f // Much stronger pop-out
+                1 -> -60f
+                2 -> -30f
+                3 -> -15f
+                else -> 0f
+            }
+            tv.translationX = translationX
+            
+            if (dist == 0) {
+                tv.setTextColor(0xFF000000.toInt())
+                tv.setTypeface(null, Typeface.BOLD)
+                tv.textSize = 20f // Larger selected text
+            } else {
+                tv.setTextColor(0xFF888888.toInt())
+                tv.setTypeface(null, Typeface.NORMAL)
+                tv.textSize = 12f
+            }
         }
     }
+
+    private fun resetWaveEffect() {
+        for (i in 0 until indexBarLayout.childCount) {
+            val tv = indexBarLayout.getChildAt(i) as TextView
+            tv.translationX = 0f
+            tv.setTextColor(0xFF888888.toInt())
+            tv.setTypeface(null, Typeface.NORMAL)
+            tv.textSize = 12f
+        }
+        currentSelectedIndex = -1
+    }
+
+    private fun filterAppsByLabel(label: String) {
+        if (!isShowingAllApps) return
+        filteredAppsList.clear()
+        allAppsList.forEach { app ->
+            val firstChar = app.name.firstOrNull() ?: return@forEach
+            val initial = getInitialSound(firstChar)
+            val match = if (label == "#") {
+                !initial[0].isLetter() && !isKorean(firstChar)
+            } else if (label.length == 1 && isKoreanConsonant(label[0])) {
+                initial == label
+            } else {
+                app.name.uppercase().startsWith(label)
+            }
+            if (match) filteredAppsList.add(app)
+        }
+        appAdapter.updateData(filteredAppsList, false)
+    }
+
+    private fun getInitialSound(c: Char): String {
+        val KOREAN_BEGIN = 0xAC00
+        val KOREAN_END = 0xD7A3
+        val CONSONANTS = arrayOf("ㄱ", "ㄲ", "ㄴ", "ㄷ", "ㄸ", "ㄹ", "ㅁ", "ㅂ", "ㅃ", "ㅅ", "ㅆ", "ㅇ", "ㅈ", "ㅉ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ")
+        if (c.code in KOREAN_BEGIN..KOREAN_END) {
+            val index = (c.code - KOREAN_BEGIN) / 28 / 21
+            return CONSONANTS[index]
+        }
+        return c.uppercaseChar().toString()
+    }
+
+    private fun isKorean(c: Char): Boolean = c.code in 0xAC00..0xD7A3 || c.code in 0x3131..0x318E
+    private fun isKoreanConsonant(c: Char): Boolean = c.code in 0x3131..0x314E
 
     private fun calculateItemHeight() {
         if (!isShowingAllApps) {
@@ -159,7 +262,6 @@ class MainActivity : AppCompatActivity() {
         intent.addCategory(Intent.CATEGORY_LAUNCHER)
         val pm: PackageManager = packageManager
         val apps: List<ResolveInfo> = pm.queryIntentActivities(intent, 0)
-
         allAppsList.clear()
         for (app in apps) {
             val packageName = app.activityInfo.packageName
@@ -195,6 +297,7 @@ class MainActivity : AppCompatActivity() {
         if (isShowingAllApps) {
             recyclerViewApps.layoutManager = LinearLayoutManager(this)
             appAdapter.updateData(allAppsList, false)
+            setupIndexBar()
             indexBarLayout.visibility = View.VISIBLE
             tvAllApps.text = "모든 앱"
         } else {
@@ -217,12 +320,9 @@ class MainActivity : AppCompatActivity() {
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
         val dateFormat = SimpleDateFormat("yyyy년 MM월 dd일 (E)", Locale.getDefault())
         val currentTime = Date()
-        
         tvTime.text = timeFormat.format(currentTime)
-        
         val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
         val batLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        
         tvDateBattery.text = String.format("%s | %d%%", dateFormat.format(currentTime), batLevel)
     }
 
@@ -231,28 +331,18 @@ class MainActivity : AppCompatActivity() {
             isShowingAllApps = !isShowingAllApps
             updateDisplayList()
         }
-
-        ivSettings.setOnClickListener {
-            showSettingsMenu()
-        }
-
-        btnRefreshScreen.setOnClickListener {
-            window.decorView.invalidate()
-        }
-
+        ivSettings.setOnClickListener { showSettingsMenu() }
+        btnRefreshScreen.setOnClickListener { window.decorView.invalidate() }
         val filter = IntentFilter()
         filter.addAction(Intent.ACTION_TIME_TICK)
         filter.addAction(Intent.ACTION_BATTERY_CHANGED)
         registerReceiver(object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                updateHeader()
-            }
+            override fun onReceive(context: Context?, intent: Intent?) { updateHeader() }
         }, filter)
     }
 
     private fun showSettingsMenu() {
         val options = arrayOf("앱 정보", "기본 런처 설정", "런처 삭제", "런처 재시작", "개인정보취급방침", "서비스이용약관", "오픈소스 라이선스", "GitHub 저장소")
-        
         AlertDialog.Builder(this)
             .setTitle("런처 설정")
             .setItems(options) { _, which ->
@@ -261,10 +351,10 @@ class MainActivity : AppCompatActivity() {
                     1 -> openDefaultLauncherSettings()
                     2 -> uninstallLauncher()
                     3 -> restartLauncher()
-                    4 -> openUrl("https://github.com/Seo-Young-Seok/palma-minimal-launcher/blob/main/PRIVACY.md")
-                    5 -> openUrl("https://github.com/Seo-Young-Seok/palma-minimal-launcher/blob/main/TERMS.md")
-                    6 -> openUrl("https://github.com/Seo-Young-Seok/palma-minimal-launcher/blob/main/LICENSE")
-                    7 -> openUrl("https://github.com/Seo-Young-Seok/palma-minimal-launcher")
+                    4 -> openUrl("https://github.com/bc1qwerty/palma-minimal-launcher/blob/main/PRIVACY.md")
+                    5 -> openUrl("https://github.com/bc1qwerty/palma-minimal-launcher/blob/main/TERMS.md")
+                    6 -> openUrl("https://github.com/bc1qwerty/palma-minimal-launcher/blob/main/LICENSE")
+                    7 -> openUrl("https://github.com/bc1qwerty/palma-minimal-launcher")
                 }
             }
             .setNegativeButton("닫기", null)
@@ -272,24 +362,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openAppInfo() {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-            data = Uri.parse("package:\$packageName")
+        try {
+            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.parse("package:" + packageName)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "설정을 열 수 없습니다.", Toast.LENGTH_SHORT).show()
         }
-        startActivity(intent)
     }
 
-    private fun openDefaultLauncherSettings() {
-        val intent = Intent(Settings.ACTION_HOME_SETTINGS)
-        startActivity(intent)
-    }
-
-    private fun uninstallLauncher() {
-        val intent = Intent(Intent.ACTION_DELETE).apply {
-            data = Uri.parse("package:\$packageName")
-        }
-        startActivity(intent)
-    }
-
+    private fun openDefaultLauncherSettings() { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
+    private fun uninstallLauncher() { startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:" + packageName))) }
     private fun restartLauncher() {
         val intent = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
@@ -297,38 +381,26 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
         Runtime.getRuntime().exit(0)
     }
-
     private fun openUrl(url: String) {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(this, "URL을 열 수 없습니다.", Toast.LENGTH_SHORT).show()
-        }
+        try { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) } 
+        catch (e: Exception) { Toast.makeText(this, "URL을 열 수 없습니다.", Toast.LENGTH_SHORT).show() }
     }
-
     private fun onAppClicked(appInfo: AppInfo) {
-        val intent = packageManager.getLaunchIntentForPackage(appInfo.packageName)
-        intent?.let {
+        packageManager.getLaunchIntentForPackage(appInfo.packageName)?.let {
             it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(it)
         }
     }
-
     private fun onAppLongClicked(appInfo: AppInfo) {
         if (isShowingAllApps) {
             val isFav = favoriteAppsList.any { it.packageName == appInfo.packageName }
             val actionText = if (isFav) "즐겨찾기에서 제거" else "즐겨찾기에 추가"
-            
             AlertDialog.Builder(this)
                 .setTitle(appInfo.name)
                 .setMessage(actionText + "하시겠습니까?")
                 .setPositiveButton("확인") { _, _ ->
-                    if (isFav) {
-                        favoriteAppsList.removeAll { it.packageName == appInfo.packageName }
-                    } else {
-                        favoriteAppsList.add(appInfo)
-                    }
+                    if (isFav) favoriteAppsList.removeAll { it.packageName == appInfo.packageName }
+                    else favoriteAppsList.add(appInfo)
                     saveFavorites()
                     Toast.makeText(this, if (isFav) "제거됨" else "추가됨", Toast.LENGTH_SHORT).show()
                 }
