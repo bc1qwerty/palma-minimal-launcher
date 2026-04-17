@@ -55,6 +55,7 @@ class MainActivity : AppCompatActivity() {
     
     private var favColumns = 2
     private var isAnimationEnabled = false
+    private var dateLocale = "KO"
 
     companion object {
         private const val TAG = "PalmaLauncher"
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_FAVORITES = "favorites_list"
         private const val KEY_COLUMNS = "fav_columns"
         private const val KEY_ANIMATION = "animation_enabled"
+        private const val KEY_LOCALE = "date_locale"
         private val POTENTIAL_INDICES = listOf("★", "ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ", 
                                               "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#")
     }
@@ -73,6 +75,7 @@ class MainActivity : AppCompatActivity() {
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         favColumns = prefs.getInt(KEY_COLUMNS, 2)
         isAnimationEnabled = prefs.getBoolean(KEY_ANIMATION, false)
+        dateLocale = prefs.getString(KEY_LOCALE, "KO") ?: "KO"
 
         initViews()
         setupRecyclerView()
@@ -337,7 +340,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateHeader() {
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("yyyy년 MM월 dd일 (E)", Locale.KOREAN)
+        val selectedLocale = when (dateLocale) {
+            "EN" -> Locale.ENGLISH
+            "JA" -> Locale.JAPANESE
+            else -> Locale.KOREAN
+        }
+        val pattern = when (dateLocale) {
+            "EN" -> "MMM dd, yyyy (E)"
+            "JA" -> "yyyy年 MM月 dd日 (E)"
+            else -> "yyyy년 MM월 dd일 (E)"
+        }
+        val dateFormat = SimpleDateFormat(pattern, selectedLocale)
         val currentTime = Date()
         tvTime.text = timeFormat.format(currentTime)
         val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
@@ -361,23 +374,46 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSettingsMenu() {
-        val options = arrayOf("즐겨찾기 배치 설정", "애니메이션 설정", "앱 정보", "기본 런처 설정", "런처 삭제", "런처 재시작", "개인정보취급방침", "서비스이용약관", "GitHub 저장소")
+        val options = arrayOf("즐겨찾기 배치 설정", "애니메이션 설정", "날짜 언어 설정", "앱 정보", "기본 런처 설정", "런처 삭제", "런처 재시작", "개인정보취급방침", "서비스이용약관", "GitHub 저장소")
         AlertDialog.Builder(this)
             .setTitle("런처 설정")
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> showColumnSettings()
                     1 -> showAnimationSettings()
-                    2 -> openAppInfo()
-                    3 -> openDefaultLauncherSettings()
-                    4 -> uninstallLauncher()
-                    5 -> restartLauncher()
-                    6 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher/blob/main/PRIVACY.md")
-                    7 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher/blob/main/TERMS.md")
-                    8 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher")
+                    2 -> showLocaleSettings()
+                    3 -> openAppInfo()
+                    4 -> openDefaultLauncherSettings()
+                    5 -> uninstallLauncher()
+                    6 -> restartLauncher()
+                    7 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher/blob/main/PRIVACY.md")
+                    8 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher/blob/main/TERMS.md")
+                    9 -> openUrl("https://github.com/bc1qwerty/e-ink-minimal-launcher")
                 }
             }
             .setNegativeButton("닫기", null)
+            .show()
+    }
+
+    private fun showLocaleSettings() {
+        val options = arrayOf("한국어 (KO)", "English (EN)", "日本語 (JA)")
+        val checkedItem = when (dateLocale) {
+            "EN" -> 1
+            "JA" -> 2
+            else -> 0
+        }
+        AlertDialog.Builder(this)
+            .setTitle("날짜 언어 설정")
+            .setSingleChoiceItems(options, checkedItem) { dialog, which ->
+                dateLocale = when (which) {
+                    1 -> "EN"
+                    2 -> "JA"
+                    else -> "KO"
+                }
+                prefs.edit().putString(KEY_LOCALE, dateLocale).apply()
+                updateHeader()
+                dialog.dismiss()
+            }
             .show()
     }
 
