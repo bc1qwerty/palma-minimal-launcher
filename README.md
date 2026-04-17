@@ -15,6 +15,7 @@ A minimalist, E-ink friendly Android launcher designed for Boox Palma, Leaf 3, L
 
 ## Versioning
 
+- **v1.3.1**: Fixed an issue where certain manufacturer-specific apps (like Onyx Launcher) would not open.
 - **v1.3.0**: Expanded column layout up to 5 columns (for tablets like Y700) and added an animation toggle setting for E-ink optimization (e.g., Boox Leaf 3).
 - **v1.2.1**: Reduced index pop-out intensity and minor UI refinements.
 - **v1.2**: Fixed index bar layering (always on top), refined "wave" pop-out visibility.
@@ -24,7 +25,7 @@ A minimalist, E-ink friendly Android launcher designed for Boox Palma, Leaf 3, L
 ## Installation
 
 ```bash
-adb install e-ink-minimal-launcher-v1.3.0.apk
+adb install e-ink-minimal-launcher-v1.3.1.apk
 ```
 
 ## License

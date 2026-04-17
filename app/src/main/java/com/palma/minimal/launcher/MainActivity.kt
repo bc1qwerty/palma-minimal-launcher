@@ -270,9 +270,10 @@ class MainActivity : AppCompatActivity() {
         for (app in apps) {
             val packageName = app.activityInfo.packageName
             if (packageName == this.packageName) continue
+            val className = app.activityInfo.name
             val name = app.loadLabel(pm).toString()
             val icon = app.loadIcon(pm)
-            allAppsList.add(AppInfo(name, packageName, icon))
+            allAppsList.add(AppInfo(name, packageName, className, icon))
         }
         allAppsList.sortBy { it.name.lowercase() }
         filterFavorites()
@@ -424,9 +425,24 @@ class MainActivity : AppCompatActivity() {
         catch (e: Exception) { Toast.makeText(this, "URL을 열 수 없습니다.", Toast.LENGTH_SHORT).show() }
     }
     private fun onAppClicked(appInfo: AppInfo) {
-        packageManager.getLaunchIntentForPackage(appInfo.packageName)?.let {
-            it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(it)
+        try {
+            val intent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                setClassName(appInfo.packageName, appInfo.className)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            packageManager.getLaunchIntentForPackage(appInfo.packageName)?.let {
+                it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                try {
+                    startActivity(it)
+                } catch (e2: Exception) {
+                    Toast.makeText(this, "앱을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
+                }
+            } ?: run {
+                Toast.makeText(this, "앱을 실행할 수 없습니다.", Toast.LENGTH_SHORT).show()
+            }
         }
     }
     private fun onAppLongClicked(appInfo: AppInfo) {

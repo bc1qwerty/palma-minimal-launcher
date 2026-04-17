@@ -12,6 +12,7 @@ import java.util.*
 data class AppInfo(
     val name: String, 
     val packageName: String,
+    val className: String,
     val icon: Drawable? = null
 )
 
