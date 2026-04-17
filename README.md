@@ -19,6 +19,7 @@ A minimalist, E-ink friendly Android launcher designed for Boox Palma, Leaf 3, L
 
 ## Versioning
 
+- **v1.3.4**: Fixed a bug where the day of the week was displayed in English on some devices (e.g., Leaf 3) by forcing the Korean locale for date formatting.
 - **v1.3.3**: Added a star (★) index to the top of the index bar in the "All Apps" view for quick access to favorite apps.
 - **v1.3.2**: Changed default animation setting to 'off' for better compatibility with low-spec E-ink devices. Added option to enable it in settings.
 - **v1.3.1**: Fixed an issue where certain manufacturer-specific apps (like Onyx Launcher) would not open.
@@ -31,7 +32,7 @@ A minimalist, E-ink friendly Android launcher designed for Boox Palma, Leaf 3, L
 ## Installation
 
 ```bash
-adb install e-ink-minimal-launcher-v1.3.3.apk
+adb install e-ink-minimal-launcher-v1.3.4.apk
 ```
 
 ## License

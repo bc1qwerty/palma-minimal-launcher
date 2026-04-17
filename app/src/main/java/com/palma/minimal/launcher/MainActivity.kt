@@ -337,7 +337,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateHeader() {
         val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        val dateFormat = SimpleDateFormat("yyyy년 MM월 dd일 (E)", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("yyyy년 MM월 dd일 (E)", Locale.KOREAN)
         val currentTime = Date()
         tvTime.text = timeFormat.format(currentTime)
         val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
