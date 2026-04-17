@@ -62,7 +62,7 @@ class MainActivity : AppCompatActivity() {
         private const val KEY_FAVORITES = "favorites_list"
         private const val KEY_COLUMNS = "fav_columns"
         private const val KEY_ANIMATION = "animation_enabled"
-        private val POTENTIAL_INDICES = listOf("ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ", 
+        private val POTENTIAL_INDICES = listOf("★", "ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ", 
                                               "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#")
     }
 
@@ -124,15 +124,19 @@ class MainActivity : AppCompatActivity() {
         indexBarLayout.removeAllViews()
         availableIndices.clear()
         POTENTIAL_INDICES.forEach { label ->
-            val hasApp = allAppsList.any { app ->
-                val firstChar = app.name.firstOrNull() ?: return@any false
-                val initial = getInitialSound(firstChar)
-                if (label == "#") {
-                    !initial[0].isLetter() && !isKorean(firstChar)
-                } else if (label.length == 1 && isKoreanConsonant(label[0])) {
-                    initial == label
-                } else {
-                    app.name.uppercase().startsWith(label)
+            val hasApp = if (label == "★") {
+                favoriteAppsList.isNotEmpty()
+            } else {
+                allAppsList.any { app ->
+                    val firstChar = app.name.firstOrNull() ?: return@any false
+                    val initial = getInitialSound(firstChar)
+                    if (label == "#") {
+                        !initial[0].isLetter() && !isKorean(firstChar)
+                    } else if (label.length == 1 && isKoreanConsonant(label[0])) {
+                        initial == label
+                    } else {
+                        app.name.uppercase().startsWith(label)
+                    }
                 }
             }
             if (hasApp) availableIndices.add(label)
@@ -223,17 +227,21 @@ class MainActivity : AppCompatActivity() {
     private fun filterAppsByLabel(label: String) {
         if (!isShowingAllApps) return
         filteredAppsList.clear()
-        allAppsList.forEach { app ->
-            val firstChar = app.name.firstOrNull() ?: return@forEach
-            val initial = getInitialSound(firstChar)
-            val match = if (label == "#") {
-                !initial[0].isLetter() && !isKorean(firstChar)
-            } else if (label.length == 1 && isKoreanConsonant(label[0])) {
-                initial == label
-            } else {
-                app.name.uppercase().startsWith(label)
+        if (label == "★") {
+            filteredAppsList.addAll(favoriteAppsList)
+        } else {
+            allAppsList.forEach { app ->
+                val firstChar = app.name.firstOrNull() ?: return@forEach
+                val initial = getInitialSound(firstChar)
+                val match = if (label == "#") {
+                    !initial[0].isLetter() && !isKorean(firstChar)
+                } else if (label.length == 1 && isKoreanConsonant(label[0])) {
+                    initial == label
+                } else {
+                    app.name.uppercase().startsWith(label)
+                }
+                if (match) filteredAppsList.add(app)
             }
-            if (match) filteredAppsList.add(app)
         }
         appAdapter.updateData(filteredAppsList, false)
     }
