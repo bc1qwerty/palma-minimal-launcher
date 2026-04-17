@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
     private var availableIndices = mutableListOf<String>()
     
     private var favColumns = 2
-    private var isAnimationEnabled = true
+    private var isAnimationEnabled = false
 
     companion object {
         private const val TAG = "PalmaLauncher"
@@ -72,7 +72,7 @@ class MainActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         favColumns = prefs.getInt(KEY_COLUMNS, 2)
-        isAnimationEnabled = prefs.getBoolean(KEY_ANIMATION, true)
+        isAnimationEnabled = prefs.getBoolean(KEY_ANIMATION, false)
 
         initViews()
         setupRecyclerView()
@@ -387,12 +387,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showAnimationSettings() {
-        val options = arrayOf("애니메이션 켜기 (Palma/Y700 권장)", "애니메이션 끄기 (Leaf 3 권장)")
-        val checkedItem = if (isAnimationEnabled) 0 else 1
+        val options = arrayOf("애니메이션 끄기 (기본/저사양 권장)", "애니메이션 켜기 (고성능/Y700 권장)")
+        val checkedItem = if (!isAnimationEnabled) 0 else 1
         AlertDialog.Builder(this)
             .setTitle("애니메이션 설정")
             .setSingleChoiceItems(options, checkedItem) { dialog, which ->
-                isAnimationEnabled = (which == 0)
+                isAnimationEnabled = (which == 1)
                 prefs.edit().putBoolean(KEY_ANIMATION, isAnimationEnabled).apply()
                 Toast.makeText(this, if (isAnimationEnabled) "애니메이션이 켜졌습니다." else "애니메이션이 꺼졌습니다.", Toast.LENGTH_SHORT).show()
                 dialog.dismiss()
